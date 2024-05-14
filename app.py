@@ -47,8 +47,8 @@ def check_password(stored_password, provided_password):
 
 def get_db_connection():
     try:
-        return pymysql.connect(host='localhost', user='root', password='', database='vbls',
-                               cursorclass=pymysql.cursors.DictCursor)
+        return pymysql.connect(host='testingcicdserverdb.c1uehec5adgq.us-east-1.rds.amazonaws.com', user='admin',
+                               password='testing2day', database='vbls', cursorclass=pymysql.cursors.DictCursor)
     except pymysql.MySQLError as e:
         print(f"The error '{e}' occurred")
         return None
