@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Comments</title>
+    <link href="https://vjs.zencdn.net/7.15.4/video-js.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <style>
+        .container {
+            display: flex;
+            flex-direction: row;
+        }
+        .video-container {
+            flex: 1.5;
+            margin-right: 4px;
+        }
+        .comments-container {
+            flex: 1;
+        }
+        .comment-btn {
+            margin-bottom: 10px;
+        }
+        .comment-timestamp {
+            margin-left: 5px;
+            color: #666;
+        }
+         #comments-list {
+        position: relative; /* Set the position context for absolute positioning inside */
+        border: 2px solid #4CAF50; /* Set the border color to green */
+        padding: 10px; /* Adding padding to ensure content inside has space */
+        margin-top: 20px; /* Optional: margin at the top for spacing */
+    }
+    .top-right-g {
+        position: absolute; /* Position the element absolutely inside the relative parent */
+        top: 0; /* Align to the top */
+        right: 0; /* Align to the right */
+        font-size: 24px; /* Set a font size or adjust as needed */
+        padding: 5px 10px; /* Add some padding for top/bottom and left/right */
+        background-color: #4CAF50; /* Set the background color to green */
+        color: white; /* Set the text color to white for better visibility */
+        border-bottom-left-radius: 10px; /* Rounded corner on the bottom-left */
+    }
+    .comment-item {
+        margin-bottom: 10px; /* Add space between comments */
+        background-color: #f9f9f9; /* Optional: Light background for comment items */
+        padding: 8px; /* Padding inside each comment item */
+        border-radius: 5px; /* Rounded corners for comment items */
+    }
+    .comment-btn {
+        background: transparent; /* Make the button transparent */
+        border: none; /* No border for the button */
+        color: #333; /* Color for the button text */
+        text-align: left; /* Align text to the left */
+        padding: 5px; /* Padding for the button */
+        width: 100%; /* Full width to align text and make it easy to click */
+    }
+    .comment-timestamp, .classified {
+        display: block; /* Make timestamp appear on its own line */
+        font-size: 0.85em; /* Smaller font size for the timestamp */
+        color: #777; /* Lighter color for timestamp text */
+        white-space: nowrap; /* Prevents the spans from wrapping onto the next line */
+    }
+    .classified {
+        text-align: right; /* Align text to the right */
+        color: red
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="video-container">
+            <h2>Computer Basics Course for Beginners
+<br>
+                <a href="{{ url_for('logout') }}">Logout</a></h2>
+            <video id="video-player" class="video-js vjs-default-skin" controls preload="auto" width="640" height="360">
+        <source src="{{ url_for('static', filename='video.mp4') }}" type="video/mp4">
+    </video>
+
+            <form id="comment-form" class="mb-3">
+                <label for="comment-input" class="form-label">Enter your comment...</label>
+                <textarea class="form-control" id="comment-input" name="comment" rows="3"></textarea>
+                <button type="button" onclick="addReply()">Submit</button>
+            </form>
+        </div>
+        <div class="comments-container">
+
+
+    <div id="comments-list">
+        {% for comment in original_comment %}
+            <div class="comment-item">
+                <button class="comment-btn" onclick="playVideo('{{ comment.start_time }}', '{{ comment.end_time }}')">
+                    {{ comment.content }}
+                </button>
+                <span class="comment-timestamp">
+                    [{{ comment.formatted_start_time  }} to {{ comment.formatted_end_time }}]
+                </span>
+            </div>
+        {% endfor %}
+        {% for comment in threads %}
+            <div class="comment-item">
+                <button class="comment-btn" onclick="playVideo('{{ comment.start_time }}', '{{ comment.end_time }}')">
+                    {{ comment.d_content }}
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+    </div>
+
+    <script src="https://vjs.zencdn.net/7.15.4/video.min.js"></script>
+    <script>
+
+    var startTime, endTime;
+var videoPlayer = videojs('video-player');
+
+document.getElementById('start-btn').addEventListener('click', function() {
+    startTime = videoPlayer.currentTime();
+    alert("Annotation start time set at " + formatTime(Math.floor(startTime)) + " seconds.");
+});
+
+document.getElementById('end-btn').addEventListener('click', function() {
+    endTime = videoPlayer.currentTime();
+    alert("Annotation end time set at " + formatTime(Math.floor(endTime)) + " seconds.");
+});
+
+function formatTime(seconds) {
+    var hours = Math.floor(seconds / 3600);
+    var minutes = Math.floor((seconds % 3600) / 60);
+    var seconds = seconds % 60;
+
+    // Padding zero to single digit minutes and seconds
+    minutes = String(minutes).padStart(2, '0');
+    seconds = String(seconds).padStart(2, '0');
+
+    // Only add hours to the string if they are present
+    if (hours > 0) {
+        hours = String(hours).padStart(2, '0') + ':';
+    } else {
+        hours = '';
+    }
+
+    return hours + minutes + ':' + seconds;
+}
+        function addComment() {
+            var commentText = $('#comment-input').val();
+            var videoPlayer = videojs('video-player');
+            var currentTime = Math.floor(videoPlayer.currentTime());
+
+             if (commentText.trim() !== "" && startTime !== undefined && endTime !== undefined) {
+
+                $.ajax({
+                    url: '/add_comment',
+                    type: 'POST',
+                    data: {
+                        comment: commentText,
+                        startTime: Math.floor(startTime),
+                        endTime: Math.floor(endTime)
+                    },
+                    success: function(response) {
+                        $('#comments-list').prepend('<div><button class="comment-btn" onclick="playVideo(\'' + startTime + '\', \'' + endTime + '\')">' + commentText + '</button><span class="comment-timestamp">[' + formatTime(Math.floor(startTime)) + ' to ' + formatTime(Math.floor(endTime)) + ']</span></div>');
+                        $('#comment-input').val(''); // Clear input after successful submission
+                        window.location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error when posting comment: " + error);
+                    }
+                });
+            }
+        }
+
+function addReply() {
+            var commentText = $('#comment-input').val();
+            var commentID = '{{ discussion_id }}';
+
+             if (commentText.trim() !== "") {
+
+                $.ajax({
+                    url: '/add_reply',
+                    type: 'POST',
+                    data: {
+                        comment: commentText,
+                        commentID: commentID
+                    },
+                    success: function(response) {
+                        $('#comments-list').prepend('<div><button class="comment-btn" onclick="playVideo(\'' + startTime + '\', \'' + endTime + '\')">' + commentText + '</button><span class="comment-timestamp">[' + formatTime(Math.floor(startTime)) + ' to ' + formatTime(Math.floor(endTime)) + ']</span></div>');
+                        $('#comment-input').val(''); // Clear input after successful submission
+                        window.location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error when posting comment: " + error);
+                    }
+                });
+            }
+        }
+
+function displayComment(buttonElement) {
+    var commentText = buttonElement.textContent;
+    document.getElementById('displayed-comment').textContent = commentText; // Display the comment text
+}
+
+function playVideo(startTime, endTime) {
+    var videoPlayer = videojs("video-player");
+    videoPlayer.currentTime(startTime); // Set the current time to start
+    videoPlayer.play();
+    videoPlayer.on('timeupdate', function() {
+        if (videoPlayer.currentTime() >= endTime) {
+            videoPlayer.pause(); // Pause the video if it reaches the end time
+        }
+    });
+}
+
+ function loadComments() {
+            var filterType = $('#filter-type').val();
+            var url = '/filter_comments';
+            if (filterType !== 'alls') {
+                url += '?type=' + filterType;
+            }
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(response) {
+                    $('#comments-list').empty(); // Clear current comments
+                    response.forEach(function(comment) {
+                        $('#comments-list').append(
+'<div class="comment-item" data-type="' + comment.type + '">' +
+    '<button class="comment-btn" ' +
+        'onclick="playVideo(' + comment.start_time + ', ' + comment.end_time + ')">' +
+        comment.content +
+    '</button>' +
+    '<span class="comment-timestamp">[' +
+        formatTime(comment.start_time) + ' to ' + formatTime(comment.end_time) +
+    ']</span>' +
+    (comment.qa_type === 1 ?
+        '<span class="classified">Classified as a question, reply here</span>' :
+        (comment.qa_type === 0 ?
+            '<span class="classified">Reply</span>' :
+            '')) +
+'</div>'
+
+                        );
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error loading comments: " + error);
+                }
+            });
+        }
+
+
+    </script>
+</body>
+</html>
